@@ -1,0 +1,77 @@
+- hosts: budget_app
+  gather_facts: false
+  become: true
+
+  tasks:
+    - name: Update apt cache.
+      apt: update_cache=true cache_valid_time=600
+      changed_when: false
+
+    - name: Install rsync (Debian).
+      apt: name=rsync state=present
+
+    - name: Install sqlite3 (Debian).
+      apt: name=sqlite3 state=present
+
+    - name: Create budget-api group
+      ansible.builtin.group:
+        name: budget-api
+        state: present
+
+    - name: Create budget-api user
+      ansible.builtin.user:
+        name: budget-api
+        group: budget-api
+        state: present
+
+    - name: Create data directory
+      ansible.builtin.file:
+        path: /var/run/budget-api
+        state: directory
+        mode: '0755'
+        owner: budget-api
+        group: budget-api
+
+    - name: Copy binary
+      synchronize:
+        src: "{{ linux_binary_path }}"
+        dest: /usr/bin/budget-api
+
+    - name: Create log file
+      ansible.builtin.file:
+        path: /var/log/budget-api.log
+        state: touch
+        mode: '0644'
+        owner: root
+        group: adm
+
+    - name: Rsyslog config file
+      ansible.builtin.template:
+        src: budget-api.conf.j2
+        dest: /etc/rsyslog.d/budget-api.conf
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Systemd service file
+      ansible.builtin.template:
+        src: budget-api.service.j2
+        dest: /etc/systemd/system/budget-api.service
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: budget-api env file
+      ansible.builtin.template:
+        src: budget-api.env.j2
+        dest: /var/run/budget-api/budget-api.env
+        owner: budget-api
+        group: budget-api
+        mode: '0600'
+
+    - name: Enable and start budget-api
+      ansible.builtin.systemd:
+        name: budget-api
+        daemon_reload: yes
+        enabled: yes
+        state: restarted

@@ -1,0 +1,19 @@
+[Unit]
+Description=Budget API
+After=syslog.target network.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=30s
+User=budget-api
+Group=budget-api
+WorkingDirectory=/var/run/budget-api
+ExecStart=/usr/bin/budget-api
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=budget-api
+EnvironmentFile=/var/run/budget-api/budget-api.env
+
+[Install]
+WantedBy=multi-user.target
